@@ -1,0 +1,50 @@
+<html>
+<head>
+    <title>Events Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.0/sockjs.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+</head>
+<body onload="connect()">
+<div style="width: 100px; height: 100px; background-color: blue" id="color-box">
+</div>
+
+<div>
+    <input type="text" id="color" placeholder="Request a color..."/>
+    <button id="sendMessage" onclick="send()">Send</button>
+
+</div>
+<script type="text/javascript">
+var server = null;
+var eventing = null;
+
+function connect() {
+    server = Stomp.over(new SockJS('/server'));
+    eventing = Stomp.over(new SockJS('/event'));
+    server.connect({}, frame => {
+        server.subscribe('/server/event', output => {
+            var event = JSON.parse(output.body);
+            var box = document.getElementById('color-box');
+            box.textContent = '';
+            if (event.type === 'error') {
+                box.textContent = event.payload.message;
+            }
+            else {
+                box.style.backgroundColor = event.payload.color;
+            }
+        });
+    });
+    eventing.connect({}, frame => {});
+}
+
+function send() {
+    eventing.send('/client/event', {}, JSON.stringify({
+        type: 'color-change',
+        payload: {
+            color: document.getElementById('color').value
+        }
+    }));
+}
+
+</script>
+</body>
+</html>
